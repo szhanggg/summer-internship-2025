@@ -173,8 +173,8 @@ def get_L1B_L2(abipaths, l2path, YYYY, DDD, HH, ROOT):
 BOUND_SIZE = 1600
 LENGTH = 10848
 
-#f = nc.Dataset("/explore/nobackup/projects/pix4dcloud/jgong/ABI_WEST_GEO_TOPO_LOMSK.nc")
-f = nc.Dataset("/explore/nobackup/projects/pix4dcloud/jgong/ABI_EAST_GEO_TOPO_LOMSK.nc")
+f = nc.Dataset("/explore/nobackup/projects/pix4dcloud/jgong/ABI_WEST_GEO_TOPO_LOMSK.nc")
+#f = nc.Dataset("/explore/nobackup/projects/pix4dcloud/jgong/ABI_EAST_GEO_TOPO_LOMSK.nc")
 abiLong = np.array(f['Longitude'])
 abiLat = np.array(f['Latitude'])
 
@@ -182,6 +182,7 @@ abiLongB = abiLong[BOUND_SIZE:LENGTH-BOUND_SIZE, BOUND_SIZE:LENGTH-BOUND_SIZE]
 abiLatB = abiLat[BOUND_SIZE:LENGTH-BOUND_SIZE, BOUND_SIZE:LENGTH-BOUND_SIZE]
 abiLongB[abiLongB == -999] = 10
 abiLatB[abiLatB == -999] = 10
+abiLongB[abiLongB < 0] += 360
 longMin = abiLongB.min()
 longMax = abiLongB.max()
 latMin = abiLatB.min()
@@ -210,8 +211,8 @@ def interpArray(Temperature, EC_height):
     return Temperature_grid
 
 def processTime(t, yy, ddn, lat, lon, ABI_ROOT):
-#    if np.floor(t) < 13 or np.floor(t) > 19:
-#        raise ValueError("Times must be between 19-23")
+    if np.floor(t) == 24:
+        raise ValueError("24 hour")
 
     if lat < latMin or lat > latMax or lon < longMin or lon > longMax:
         raise ValueError("Latitude and Longitude are not correctly bounded")
@@ -224,7 +225,7 @@ def processTime(t, yy, ddn, lat, lon, ABI_ROOT):
     distances = np.abs(abiLat[lati-AREA_SIZE:lati+AREA_SIZE, loni-AREA_SIZE:loni+AREA_SIZE] - lat) + np.abs(abiLong[lati-AREA_SIZE:lati+AREA_SIZE, loni-AREA_SIZE:loni+AREA_SIZE] - lon)
     coords = np.array(np.unravel_index(distances.argmin(), distances.shape))
     if coords[0] == 0 or coords[1] == 0 or coords[1] == 2*AREA_SIZE-1 or coords[0] == 2*AREA_SIZE - 1:
-        print("FALLBACK")
+        # print("FALLBACK")
         distances = np.abs(abiLat - lat) + np.abs(abiLong - lon)
         coords = np.unravel_index(distances.argmin(), distances.shape)
     else:
@@ -235,6 +236,9 @@ def processTime(t, yy, ddn, lat, lon, ABI_ROOT):
         raise ValueError("Bad latitude and longitude")
 
     hour = np.floor(t).astype(int)
+
+    if hour < 10:
+        hour = "0" + str(hour)
 
     DATA = GATHERED_ABI_FILES.get(f'{yy}-{ddn}-{hour}')
     if DATA is None:
@@ -286,6 +290,7 @@ def processFile(yy, ddn, orbit, latb):
 
     ##========== read 2b-cldclass-lidar ================================
     [cs_clb,cs_clt,cs_cltype,cs_QC,Latitude,Longitude] = read_2b_cldclass_lidar(cs_file[0],latbin=latb)
+    Longitude[Longitude < 0] += 360
 
     Pressure = interpArray(Pressure, EC_height)
     Temperature = interpArray(Temperature, EC_height)
@@ -329,6 +334,8 @@ def processFile(yy, ddn, orbit, latb):
             i += 20
             continue
 
+        if i + 46 >= N:
+            break
 
         # dRange = np.arange(i-45, i+46)
         # Reverse the CloudSAT Data
@@ -353,7 +360,7 @@ def processFile(yy, ddn, orbit, latb):
 
         # chip = chip[..., translation]
 
-        np.savez('/explore/nobackup/projects/pix4dcloud/szhang16/abiChips/GOES-16/' + fileName, chip=chip, data=aux_data)
+        np.savez('/explore/nobackup/projects/pix4dcloud/szhang16/abiChips/GOES-17/' + fileName, chip=chip, data=aux_data)
         print(fileName, UTC_Time[i])
 
         i += 45
@@ -373,14 +380,14 @@ try:
 except:
     print("Pass in year as the argument")
 for day in os.listdir(ROOT_DIR + '/' + year):
-    if(int(day) != 1):
+    if int(day) < 75:
         continue
     for file in os.listdir(ROOT_DIR + '/' + year + '/' + day):
         if file.endswith('hdf'):
             orbit = file[14:19]
-            if int(file[7:9]) > 18:
-                print(f"PROCESSING FILE {year} {day} {orbit}")
-                processFile(year, day, orbit, (latMin, latMax))
+            #if int(file[7:9]) > 18:
+            print(f"PROCESSING FILE {year} {day} {orbit}")
+            processFile(year, day, orbit, (latMin, latMax))
     # reset abi data
     GATHERED_ABI_FILES = {}
     COLLECTED_ABI_DATA = {}
