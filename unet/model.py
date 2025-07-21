@@ -93,10 +93,11 @@ class DiceLoss(nn.Module):
         return 1. - dice_score
 
 class LightningUNET(pl.LightningModule):
-    def __init__(self, in_channels=3, classes=1, dice_weight=0.5):
+    def __init__(self, in_channels=3, classes=1, dice_weight=0.5, learning_rate=0.001):
         super().__init__()
         self.in_channels = in_channels
         self.classes = classes
+        self.learning_rate = learning_rate
         self.model = UNET(in_channels=self.in_channels, num_classes=self.classes)
         self.iou = JaccardIndex(task="binary", num_classes=2)
         self.ce_loss = nn.BCEWithLogitsLoss()
@@ -139,4 +140,4 @@ class LightningUNET(pl.LightningModule):
         self.log("test_iou", loss, prog_bar=True)        
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
+        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)

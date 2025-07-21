@@ -211,6 +211,9 @@ def interpArray(Temperature, EC_height):
     return Temperature_grid
 
 def processTime(t, yy, ddn, lat, lon, ABI_ROOT):
+    if np.floor(t) < 19:
+        raise ValueError("outside 19-23 bound")
+
     if np.floor(t) == 24:
         raise ValueError("24 hour")
 
@@ -320,7 +323,7 @@ def processFile(yy, ddn, orbit, latb):
 
     while i < N:
         try:
-            chip, coords = processTime(UTC_Time[i], yy, ddn, Latitude[i], Longitude[i], '/css/geostationary/BackStage/GOES-17-ABI-L1B-FULLD/')
+            chip, coords = processTime(UTC_Time[i], yy, ddn, Latitude[i], Longitude[i], '/css/geostationary/BackStage/GOES-16-ABI-L1B-FULLD/')
         except ValueError:
             i += 20
             continue
@@ -360,7 +363,7 @@ def processFile(yy, ddn, orbit, latb):
 
         # chip = chip[..., translation]
 
-        np.savez('/explore/nobackup/projects/pix4dcloud/szhang16/abiChips/GOES-17/' + fileName, chip=chip, data=aux_data)
+        np.savez('/explore/nobackup/projects/pix4dcloud/szhang16/abiChips/GOES-16-New/' + fileName, chip=chip, data=aux_data)
         print(fileName, UTC_Time[i])
 
         i += 45
@@ -380,12 +383,9 @@ try:
 except:
     print("Pass in year as the argument")
 for day in os.listdir(ROOT_DIR + '/' + year):
-    if int(day) < 75:
-        continue
     for file in os.listdir(ROOT_DIR + '/' + year + '/' + day):
         if file.endswith('hdf'):
             orbit = file[14:19]
-            #if int(file[7:9]) > 18:
             print(f"PROCESSING FILE {year} {day} {orbit}")
             processFile(year, day, orbit, (latMin, latMax))
     # reset abi data
