@@ -9,11 +9,11 @@ import matplotlib.pyplot as plt
 import random
 
 datapath = '/explore/nobackup/projects/pix4dcloud/szhang16/abiChips/GOES-16/'
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
 IMG_CHANNELS = 16
-LEARNING_RATE = 0.001
+LEARNING_RATE = 1e-4
 EPOCHS = 1000
 DATALOADER_WORKERS = 10
 
@@ -66,11 +66,11 @@ class AbiDataModule(pl.LightningDataModule):
 if __name__ == '__main__':
     pl.seed_everything(27, workers=True)
 
-    unet = LightningUNET(in_channels=IMG_CHANNELS, classes=1)
+    unet = LightningUNET(in_channels=IMG_CHANNELS, classes=1, learning_rate=LEARNING_RATE)
     # net = LightningUNET.load_from_checkpoint("/explore/nobackup/projects/pix4dcloud/szhang16/checkpoints/40epochs1900chips.ckpt", in_channels=IMG_CHANNELS, classes=1)
 
     lr_scheduler = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
-    early_stopping = pl.callbacks.early_stopping.EarlyStopping(monitor="val_loss", mode="min")
+    early_stopping = pl.callbacks.early_stopping.EarlyStopping(monitor="val_loss", mode="min", patience=10)
 
     datamodule = AbiDataModule(datapath, BATCH_SIZE)
 
@@ -84,4 +84,4 @@ if __name__ == '__main__':
 
     trainer.fit(model=unet, datamodule=datamodule)
 
-    trainer.save_checkpoint("/explore/nobackup/people/szhang16/checkpoints/july17.ckpt")
+    trainer.save_checkpoint("/explore/nobackup/people/szhang16/checkpoints/july22.ckpt")

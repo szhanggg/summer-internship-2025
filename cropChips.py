@@ -378,11 +378,15 @@ ROOT_DIR = '/explore/nobackup/projects/pix4dcloud/szhang16/cloudsat/2B-CLDCLASS-
 #    if year == "2018":
 #        continue
 year = 0
+dayskip = 0
 try:
     year = sys.argv[1]
+    dayskip = sys.argv[2]
 except:
     print("Pass in year as the argument")
 for day in os.listdir(ROOT_DIR + '/' + year):
+    if int(day) < dayskip:
+        continue
     for file in os.listdir(ROOT_DIR + '/' + year + '/' + day):
         if file.endswith('hdf'):
             orbit = file[14:19]
