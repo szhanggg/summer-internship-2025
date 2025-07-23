@@ -385,7 +385,7 @@ try:
 except:
     print("Pass in year as the argument")
 for day in os.listdir(ROOT_DIR + '/' + year):
-    if int(day) < dayskip:
+    if int(day) < int(dayskip):
         continue
     for file in os.listdir(ROOT_DIR + '/' + year + '/' + day):
         if file.endswith('hdf'):

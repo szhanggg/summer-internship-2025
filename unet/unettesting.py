@@ -66,7 +66,7 @@ class AbiDataModule(pl.LightningDataModule):
 if __name__ == '__main__':
     pl.seed_everything(27, workers=True)
 
-    unet = LightningUNET.load_from_checkpoint("/explore/nobackup/people/szhang16/checkpoints/july17.ckpt", in_channels=IMG_CHANNELS, classes=1)
+    unet = LightningUNET.load_from_checkpoint("/explore/nobackup/projects/pix4dcloud/szhang16/checkpoints/lightning_logs/version_39084251/checkpoints/epoch=25-step=3900.ckpt", in_channels=IMG_CHANNELS, classes=1)
 
     lr_scheduler = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
     early_stopping = pl.callbacks.early_stopping.EarlyStopping(monitor="val_loss", mode="min")
