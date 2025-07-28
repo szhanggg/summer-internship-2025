@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import lightning as pl
+from lightning.pytorch.callbacks import ModelCheckpoint
 from huggingface_hub import snapshot_download
 from torch.utils.data import Dataset, DataLoader
 import glob
@@ -11,7 +12,6 @@ import torchvision.transforms as T
 
 from torchmetrics import JaccardIndex
 import torchvision.transforms.functional as TF
-import pytorch_lightning as pl
 
 from transforms import MinMaxEmissiveScaleReflectance, ConvertABIToReflectanceBT
 
@@ -234,11 +234,13 @@ if __name__ == '__main__':
 
     datamodule = AbiDataModule(chip_dir=datapath, batch_size=BATCH_SIZE)
 
+    checkpoint_callback = ModelCheckpoint(dirpath="/explore/nobackup/projects/pix4dcloud/szhang16/checkpoints/unetquarter", save_top_k=1, every_n_epochs=5)
+
     trainer = pl.Trainer(
         max_epochs=EPOCHS,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=1,
-        default_root_dir="/explore/nobackup/projects/pix4dcloud/szhang16/unet.quarter.checkpoints",
+        callbacks=[checkpoint_callback]
     )
     trainer.fit(model=model, datamodule=datamodule)
 

@@ -5,6 +5,7 @@ import subprocess
 import torch.nn as nn
 import torch.nn.functional as F
 import lightning as pl
+from lightning.pytorch.callbacks import ModelCheckpoint
 from huggingface_hub import snapshot_download
 from torch.utils.data import Dataset, DataLoader
 import glob
@@ -81,7 +82,7 @@ class AbiDataModule(pl.LightningDataModule):
 
     def setup(self, stage):
         total_chips = glob.glob(self.chip_dir + "*.npz")
-        train_idx = int(len(total_chips) * 0.2)
+        train_idx = int(len(total_chips) * 0.8)
         val_idx = int(len(total_chips) * 0.9)
         self.train_dataset = AbiChipDataset(total_chips[:train_idx])
         self.val_dataset = AbiChipDataset(total_chips[train_idx:val_idx])
@@ -242,13 +243,15 @@ if __name__ == '__main__':
     )
 
     datamodule = AbiDataModule(chip_dir=datapath, batch_size=BATCH_SIZE)
+    checkpoint_callback = ModelCheckpoint(dirpath="/explore/nobackup/projects/pix4dcloud/szhang16/checkpoints/satfull", save_top_k=1, every_n_epochs=5)
 
     trainer = pl.Trainer(
         max_epochs=EPOCHS,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
         devices=1,
-        default_root_dir="/explore/nobackup/projects/pix4dcloud/szhang16/satvision.quarter.checkpoints",
+        callbacks=[checkpoint_callback]
     )
+
     trainer.fit(model=model, datamodule=datamodule)
 
     trainer.test(model=model, datamodule=datamodule)
