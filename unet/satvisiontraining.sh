@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=unet-training
+#SBATCH --job-name=satvision-training
 #SBATCH --time=72:00:00
 
 #SBATCH --nodes=1
@@ -9,4 +9,4 @@
 module load anaconda
 conda activate torch
 
-srun python3 unetpipeline.py
+srun python3 satvisionpipeline.py

@@ -12,6 +12,8 @@ import numpy as np
 
 import torchvision.transforms as T
 
+from torchmetrics import JaccardIndex
+
 from transforms import MinMaxEmissiveScaleReflectance, ConvertABIToReflectanceBT
 
 sys.path.append('/explore/nobackup/people/jacaraba/development/satvision-toa')
@@ -20,12 +22,12 @@ from satvision_toa.models.mim import build_mim_model
 
 datapath = '/explore/nobackup/projects/pix4dcloud/szhang16/abiChips/GOES-16/'
 
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 IMG_HEIGHT = 128
 IMG_WIDTH = 128
 IMG_CHANNELS = 16
 LEARNING_RATE = 1e-4
-EPOCHS = 20
+EPOCHS = 100
 DATALOADER_WORKERS = 10
 
 translation = [1, 2, 0, 4, 5, 6, 3, 8, 9, 10, 11, 13, 14, 15]
@@ -79,7 +81,7 @@ class AbiDataModule(pl.LightningDataModule):
 
     def setup(self, stage):
         total_chips = glob.glob(self.chip_dir + "*.npz")
-        train_idx = int(len(total_chips) * 0.8)
+        train_idx = int(len(total_chips) * 0.2)
         val_idx = int(len(total_chips) * 0.9)
         self.train_dataset = AbiChipDataset(total_chips[:train_idx])
         self.val_dataset = AbiChipDataset(total_chips[train_idx:val_idx])
@@ -192,7 +194,7 @@ class SatVisionUNet(nn.Module):
         x = self.upconv0(x)
         x = self.final(x)  # [B, 64, 128, 128]
 
-        x = self.prediction_head(x)  # [B, out_channels, 96, 40]
+        x = self.prediction_head(x)  # [B, out_channels, 91, 40]
 
         return x
 
@@ -201,10 +203,11 @@ class SatVisionUNetLightning(pl.LightningModule):
     def __init__(self, lr=1e-4, dice_weight=0.5, freeze_encoder=True, num_classes=1):
         super().__init__()
         self.save_hyperparameters()
-        self.model = SatVisionUNet(out_channels=num_classes, freeze_encoder=freeze_encoder, input_channels=14, final_size=(96, 40))
+        self.model = SatVisionUNet(out_channels=num_classes, freeze_encoder=freeze_encoder, input_channels=14, final_size=(91, 40))
         self.ce_loss = nn.BCEWithLogitsLoss()
         self.dice_loss = DiceLoss()
         self.dice_weight = dice_weight
+        self.iou = JaccardIndex(task="binary", num_classes=2)
 
     def forward(self, x):
         return self.model(x)
@@ -215,7 +218,10 @@ class SatVisionUNetLightning(pl.LightningModule):
         ce = self.ce_loss(logits, masks)
         dice = self.dice_loss(logits, masks)
         loss = self.dice_weight * dice + (1 - self.dice_weight) * ce
-        self.log(f'{stage}_loss', loss, prog_bar=True, on_epoch=True)
+        self.log(f'{stage}_loss', loss, prog_bar=True, on_step=True, on_epoch=True)
+        if stage == 'val' or stage == 'test':
+            iou = self.iou(logits.sigmoid() > 0.5, masks)
+            self.log(f'{stage}_iou', iou, prog_bar=True, on_step=True, on_epoch=True)
         return loss
 
     def training_step(self, b, i): return self._common_step(b, 'train')
@@ -240,8 +246,8 @@ if __name__ == '__main__':
     trainer = pl.Trainer(
         max_epochs=EPOCHS,
         accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        devices="auto",
-        default_root_dir="/explore/nobackup/projects/pix4dcloud/szhang16/checkpoints",
+        devices=1,
+        default_root_dir="/explore/nobackup/projects/pix4dcloud/szhang16/satvision.quarter.checkpoints",
     )
     trainer.fit(model=model, datamodule=datamodule)
 
