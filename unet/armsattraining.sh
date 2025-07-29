@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=sat-$1
+#SBATCH --job-name=satvision-training
 #SBATCH --time=72:00:00
 
 #SBATCH --nodes=1
@@ -10,4 +10,4 @@
 module load miniforge
 conda activate 3dclouddownstream
 
-srun python3 satvisionpipeline.py $1 $2
+srun python3 3dcloudpipeline.py $1 $2

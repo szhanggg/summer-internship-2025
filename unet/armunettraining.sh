@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=unet-$1
+#SBATCH --job-name=unet-training
 #SBATCH --time=72:00:00
 
 #SBATCH --nodes=1
@@ -10,4 +10,4 @@
 module load miniforge
 conda activate 3dclouddownstream
 
-srun python3 unetpipeline.py $1 $2
+srun python3 3dcloudpipeline.py $1 $2
