@@ -31,7 +31,7 @@ if __name__ == '__main__':
     else:
         raise ValueError(f"Unknown model name: {MODEL_NAME}")
 
-    datamodule = AbiDataModule(chip_dir=datapath, batch_size=BATCH_SIZE, num_workers=DATALOADER_WORKERS)
+    datamodule = AbiDataModule(chip_dir=datapath, batch_size=BATCH_SIZE, num_workers=DATALOADER_WORKERS, training_split=TRAINING_SPLIT)
     checkpoint_callback = ModelCheckpoint(dirpath=checkpointpath, save_top_k=-1, every_n_epochs=2)
     best_checkpoint_callback = ModelCheckpoint(dirpath=checkpointpath, save_top_k=1, monitor="val_loss", mode="min", filename="best-{epoch:02d}-{val_loss:.2f}")
 

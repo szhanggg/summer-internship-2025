@@ -18,39 +18,28 @@ EPOCHS = 100
 MODEL_NAME = sys.argv[1] if len(sys.argv) > 1 else None
 DATALOADER_WORKERS = 71
 
-#MODEL_NAMES = ["satfull", "sathalf", "satquarter", "sateighth", "unetfull", "unethalf", "unetquarter", "uneteighth"]
-MODEL_NAMES = ["unetfull"]
+MODEL_NAMES = ["satfull", "sathalf", "satquarter", "sateighth", "unetfull", "unethalf", "unetquarter", "uneteighth"]
+#MODEL_NAMES = ["unetfull"]
 
 datapath = '/explore/nobackup/projects/pix4dcloud/szhang16/abiChips/GOES-16/'
 
 class SaveTestResultsCallback(L.Callback):
-    def __init__(self, save_dir):
+    def __init__(self, save_dir, model_name):
         super().__init__()
         self.save_dir = save_dir
         self.test_results = []
-        self.model_name = None
+        self.model_name = model_name
     
     def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         self.test_results.append(outputs["iou"].detach().cpu().numpy())
     
     def on_test_end(self, trainer, pl_module):
         self.test_results = np.array(self.test_results)
-        self.model_name = pl_module.hparams.model_name
         np.save(self.save_dir + f"{self.model_name}.npy", self.test_results)
 
 
 if __name__ == '__main__':
     datamodule = AbiDataModule(chip_dir=datapath, batch_size=1, num_workers=DATALOADER_WORKERS)
-
-    savecallback = SaveTestResultsCallback(save_dir="/explore/nobackup/projects/pix4dcloud/szhang16/test_results/")
-
-    trainer = L.Trainer(
-        max_epochs=EPOCHS,
-        accelerator="gpu" if torch.cuda.is_available() else "cpu",
-        devices=1,
-        callbacks=[savecallback],
-        enable_checkpointing=False,
-    )
 
     for model_name in MODEL_NAMES:
         best_ckpt = glob.glob("/explore/nobackup/people/szhang16/checkpoints/" + model_name + "/best-*.ckpt")
@@ -62,6 +51,17 @@ if __name__ == '__main__':
             model = LightningModel.load_from_checkpoint(best_ckpt[0], model_name="SatVisionUNet", in_channels=IMG_CHANNELS, num_classes=1, lr=LEARNING_RATE, freeze_encoder=True, final_size=(91, 40))
         elif model_name.startswith("unet"):
             model = LightningModel.load_from_checkpoint(best_ckpt[0], model_name="UNet", in_channels=IMG_CHANNELS, num_classes=1, lr=LEARNING_RATE, freeze_encoder=False)
+
+        savecallback = SaveTestResultsCallback(save_dir="/explore/nobackup/projects/pix4dcloud/szhang16/test_results/", model_name=model_name)
+
+        trainer = L.Trainer(
+            max_epochs=EPOCHS,
+            accelerator="gpu" if torch.cuda.is_available() else "cpu",
+            devices=1,
+            callbacks=[savecallback],
+            enable_checkpointing=False,
+            default_root_dir="/explore/nobackup/people/szhang16/checkpoints",
+        )
 
         # Loop through the test datasat pytorch datalaoder
         trainer.test(model=model, datamodule=datamodule)
